@@ -10,7 +10,14 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
-} ptable;
+  int randnum;
+} ptable = { .randnum = 11587};  // seed value
+// TODO - ensure this works, or move randnum into 
+// global variable and forgo the lock
+// TODO - see if we can get a more random seed (cmostime)
+
+// TODO - add CPU ticks counting
+// TODO - add new pstat system call
 
 static struct proc *initproc;
 
@@ -19,6 +26,15 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+// Pseudo random number generator
+// Copied from: 
+// https://en.wikipedia.org/wiki/Lehmer_random_number_generator
+int lcg_parkmiller(int *state)
+{
+	return *state = *state * 48271 % 0x7fffffff;
+}
+
 
 void
 pinit(void)
@@ -141,6 +157,8 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
+  p->priority = 1;  // put new proc on priority queue 1
+  p->tickets = 1;  // default ticket count of 1
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
@@ -199,6 +217,8 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->priority = 1;  // put new proc on priority queue 1
+  np->tickets = 1;  // default ticket count of 1
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -294,6 +314,8 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        p->priority = 0;
+        p->tickets = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -323,6 +345,7 @@ void
 scheduler(void)
 {
   struct proc *p;
+  int priority;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -330,12 +353,19 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
-    // Loop over process table looking for process to run.
+    
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
 
+    // choose randomly from priority 1
+    priority = 1;
+    p = getnextproc(priority);
+    // If that was empty, choose randomly from priority 2
+    if(!p) {
+      priority = 2;
+      p = getnextproc(priority);
+    }
+
+    if(p) {
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -343,16 +373,55 @@ scheduler(void)
       switchuvm(p);
       p->state = RUNNING;
 
-      swtch(&(c->scheduler), p->context);
+      if(priority == 1) {
+        // priority is 1 -> run this process once & downgrade priority
+        swtch(&(c->scheduler), p->context);
+        p->priority = 2;
+      } else if(priority == 2) {
+        // priority is 2 -> run this process twice
+        swtch(&(c->scheduler), p->context);  
+        swtch(&(c->scheduler), p->context);  
+      }
       switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
-    release(&ptable.lock);
 
+    release(&ptable.lock);
   }
+}
+
+
+// TODO - verify correctness
+// Given a the priority number, chooses a proc
+// from that queue randomly based on ticket allocation
+struct proc *getnextproc(int priority) {
+  struct proc *p;
+  int chosenticket = 0;
+  int totalTickets = 0;
+  // sum the # of tickets at this priority level
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE && p->priority == priority)
+      totalTickets += p->tickets;
+  }
+  // if there are no procs at this priority, tickets == zero
+  if (totalTickets == 0) {
+    return 0;
+  }
+  // chosen ticket -> random num within 1..num_tickets
+  lcg_parkmiller(&ptable.randnum);
+  chosenticket = (ptable.randnum % totalTickets) + 1;
+  // iterate and decrement the ticket count by each proc's
+  // tickets; when <= 0, we have reached the winner
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE && p->priority == priority) {
+      chosenticket -= p->tickets;
+      if(chosenticket <= 0) return p;
+    }
+  }
+  return 0;
 }
 
 // Enter scheduler.  Must hold only ptable.lock
