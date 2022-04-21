@@ -363,6 +363,21 @@ struct proc *getnextproc(int priority) {
   return 0;
 }
 
+// Given a process, performs context switch & runs the process
+void runProc(struct proc *p, struct cpu *c) {
+  // Switch to chosen process.  It is the process's job
+  // to release ptable.lock and then reacquire it
+  // before jumping back to us.
+  c->proc = p;
+  switchuvm(p);
+  p->state = RUNNING;
+  swtch(&(c->scheduler), p->context);
+  // Process is done running for now.
+  // It should have changed its p->state before coming back.
+  switchkvm();
+  c->proc = 0;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -382,7 +397,6 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
     
     acquire(&ptable.lock);
 
@@ -396,27 +410,15 @@ scheduler(void)
     }
 
     if(p) {
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
       if(priority == 1) {
         // priority is 1 -> run this process once & downgrade priority
-        swtch(&(c->scheduler), p->context);
+        runProc(p, c);
         p->priority = 2;
       } else if(priority == 2) {
         // priority is 2 -> run this process twice
-        swtch(&(c->scheduler), p->context);  
-        swtch(&(c->scheduler), p->context);  
+        runProc(p, c);
+        runProc(p, c); 
       }
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
     }
 
     release(&ptable.lock);
