@@ -333,6 +333,36 @@ wait(void)
   }
 }
 
+// TODO - verify correctness
+// Given a the priority number, chooses a proc
+// from that queue randomly based on ticket allocation
+struct proc *getnextproc(int priority) {
+  struct proc *p;
+  int chosenticket = 0;
+  int totalTickets = 0;
+  // sum the # of tickets at this priority level
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE && p->priority == priority)
+      totalTickets += p->tickets;
+  }
+  // if there are no procs at this priority, tickets == zero
+  if (totalTickets == 0) {
+    return 0;
+  }
+  // chosen ticket -> random num within 1..num_tickets
+  lcg_parkmiller(&ptable.randnum);
+  chosenticket = (ptable.randnum % totalTickets) + 1;
+  // iterate and decrement the ticket count by each proc's
+  // tickets; when <= 0, we have reached the winner
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE && p->priority == priority) {
+      chosenticket -= p->tickets;
+      if(chosenticket <= 0) return p;
+    }
+  }
+  return 0;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -393,36 +423,6 @@ scheduler(void)
   }
 }
 
-
-// TODO - verify correctness
-// Given a the priority number, chooses a proc
-// from that queue randomly based on ticket allocation
-struct proc *getnextproc(int priority) {
-  struct proc *p;
-  int chosenticket = 0;
-  int totalTickets = 0;
-  // sum the # of tickets at this priority level
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->state == RUNNABLE && p->priority == priority)
-      totalTickets += p->tickets;
-  }
-  // if there are no procs at this priority, tickets == zero
-  if (totalTickets == 0) {
-    return 0;
-  }
-  // chosen ticket -> random num within 1..num_tickets
-  lcg_parkmiller(&ptable.randnum);
-  chosenticket = (ptable.randnum % totalTickets) + 1;
-  // iterate and decrement the ticket count by each proc's
-  // tickets; when <= 0, we have reached the winner
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->state == RUNNABLE && p->priority == priority) {
-      chosenticket -= p->tickets;
-      if(chosenticket <= 0) return p;
-    }
-  }
-  return 0;
-}
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
