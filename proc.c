@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "pstat.h"
 
 struct {
   struct spinlock lock;
@@ -610,4 +611,24 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int getpinfo(struct pstat *stat) {
+  // TODO - do I need to disable interrupts here?
+  struct proc *p;
+  int i;
+  acquire(&ptable.lock);
+  for(i = 0; i < NPROC; i++) {
+    p = ptable.proc + i;
+    if(p->state == UNUSED) {
+      stat->inuse[i] = 0;
+    } else {
+      stat->inuse[i] = 1;
+    }
+    stat->pid[i] = p->pid;
+    stat->hticks[i] = p->hticks;
+    stat->lticks[i] = p->lticks;
+  }
+  release(&ptable.lock);
+  return 0;
 }
