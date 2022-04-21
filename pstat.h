@@ -8,6 +8,7 @@ struct pstat {
     int pid[NPROC];   // the PID of each process
     int hticks[NPROC]; // the number of ticks each process has accumulated at HIGH priority
     int lticks[NPROC]; // the number of ticks each process has accumulated at LOW priority
+    char name[NPROC][16];  // name of proceses
 };
 
 

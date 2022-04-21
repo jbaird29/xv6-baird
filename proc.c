@@ -613,13 +613,13 @@ procdump(void)
   }
 }
 
-int getpinfo(struct pstat *stat) {
+int fillpinfo(struct pstat *stat) {
   // TODO - do I need to disable interrupts here?
+
   struct proc *p;
-  int i;
+  int i = 0;
   acquire(&ptable.lock);
-  for(i = 0; i < NPROC; i++) {
-    p = ptable.proc + i;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED) {
       stat->inuse[i] = 0;
     } else {
@@ -628,6 +628,8 @@ int getpinfo(struct pstat *stat) {
     stat->pid[i] = p->pid;
     stat->hticks[i] = p->hticks;
     stat->lticks[i] = p->lticks;
+    safestrcpy(stat->name[i], p->name, sizeof(p->name));
+    i++;
   }
   release(&ptable.lock);
   return 0;

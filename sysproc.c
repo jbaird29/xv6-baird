@@ -92,14 +92,19 @@ sys_uptime(void)
 }
 
 // TODO - double check this
-int sys_settickets(int num) {
-  if(num < 1) {
+int sys_settickets(void) {
+  int num = 0;
+  if(argint(0, &num) < 0)
     return -1;
-  }
+  if(num < 1)
+    return -1;
   myproc()->tickets = num;
   return 0;
 }
 
-int sys_getpinfo(struct pstat *stat) {
-  return getpinfo(stat);
+int sys_getpinfo(void) {
+  struct pstat *stat;
+  if(argptr(0, (void*)&stat, sizeof(*stat)) < 0)
+    return -1;
+  return fillpinfo(stat);
 }
