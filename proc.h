@@ -51,6 +51,8 @@ struct proc {
   char name[16];               // Process name (debugging)
   int priority;                // Scheduling queue (1 or 2)
   int tickets;                 // Scheduling tickets allocated
+  int hticks;                  // CPU ticks executed at priority 1
+  int lticks;                  // CPU ticks executed at priority 2
 };
 
 // Process memory is laid out contiguously, low addresses first:

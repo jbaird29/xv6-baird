@@ -159,6 +159,8 @@ userinit(void)
   p->cwd = namei("/");
   p->priority = 1;  // put new proc on priority queue 1
   p->tickets = 1;  // default ticket count of 1
+  p->hticks = 0;
+  p->lticks = 0;
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
@@ -219,6 +221,8 @@ fork(void)
   *np->tf = *curproc->tf;
   np->priority = 1;  // put new proc on priority queue 1
   np->tickets = 1;  // default ticket count of 1
+  np->hticks = 0;
+  np->lticks = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -316,6 +320,8 @@ wait(void)
         p->killed = 0;
         p->priority = 0;
         p->tickets = 0;
+        p->hticks = 0;
+        p->lticks = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -390,7 +396,6 @@ void
 scheduler(void)
 {
   struct proc *p;
-  int priority;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -401,23 +406,26 @@ scheduler(void)
     acquire(&ptable.lock);
 
     // choose randomly from priority 1
-    priority = 1;
-    p = getnextproc(priority);
+    p = getnextproc(1);
     // If that was empty, choose randomly from priority 2
     if(!p) {
-      priority = 2;
-      p = getnextproc(priority);
+      p = getnextproc(2);
     }
 
     if(p) {
-      if(priority == 1) {
+      if(p->priority == 1) {
         // priority is 1 -> run this process once & downgrade priority
+        p->hticks++;
         runProc(p, c);
         p->priority = 2;
-      } else if(priority == 2) {
-        // priority is 2 -> run this process twice
+      } else if(p->priority == 2) {
+        // priority is 2 -> run this process twice if able to
+        p->lticks++;
         runProc(p, c);
-        runProc(p, c); 
+        if(p->state == RUNNABLE) {
+          p->lticks++;
+          runProc(p, c); 
+        }
       }
     }
 
