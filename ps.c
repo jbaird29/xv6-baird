@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
   
   for(i = 0; i < NPROC; i++) {
       if(stat.inuse[i])
-        printf(1, "PID: %d | High Ticks: %d | Low Ticks: %d | Name: %s\n", stat.pid[i], stat.hticks[i], stat.lticks[i], stat.name[i]);
+        printf(1, "PID: %d | High Ticks: %d | Low Ticks: %d | Tickets: %d | Name: %s\n", stat.pid[i], stat.hticks[i], stat.lticks[i], stat.tickets[i], stat.name[i]);
   }
     
   exit();

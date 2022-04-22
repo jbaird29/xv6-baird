@@ -11,7 +11,7 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
-  int randnum;
+  uint randnum;
 } ptable = { .randnum = 11587};  // seed value
 // TODO - ensure this works, or move randnum into 
 // global variable and forgo the lock
@@ -31,9 +31,16 @@ static void wakeup1(void *chan);
 // Pseudo random number generator
 // Copied from: 
 // https://en.wikipedia.org/wiki/Lehmer_random_number_generator
-int lcg_parkmiller(int *state)
+uint lcg_parkmiller(uint *state)
 {
-	return *state = *state * 48271 % 0x7fffffff;
+	const uint A = 48271;
+
+	uint low  = (*state & 0x7fff) * A;			// max: 32,767 * 48,271 = 1,581,695,857 = 0x5e46c371
+	uint high = (*state >> 15)    * A;			// max: 65,535 * 48,271 = 3,163,439,985 = 0xbc8e4371
+	uint x = low + ((high & 0xffff) << 15) + (high >> 16);	// max: 0x5e46c371 + 0x7fff8000 + 0xbc8e = 0xde46ffff
+
+	x = (x & 0x7fffffff) + (x >> 31);
+	return *state = x;
 }
 
 
@@ -363,7 +370,7 @@ struct proc *getnextproc(int priority) {
   // tickets; when <= 0, we have reached the winner
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == RUNNABLE && p->priority == priority) {
-      chosenticket -= p->tickets;
+      chosenticket = chosenticket - p->tickets;
       if(chosenticket <= 0) return p;
     }
   }
@@ -412,7 +419,7 @@ scheduler(void)
     if(!p) {
       p = getnextproc(2);
     }
-
+    
     if(p) {
       if(p->priority == 1) {
         // priority is 1 -> run this process once & downgrade priority
@@ -629,6 +636,7 @@ int fillpinfo(struct pstat *stat) {
     stat->hticks[i] = p->hticks;
     stat->lticks[i] = p->lticks;
     safestrcpy(stat->name[i], p->name, sizeof(p->name));
+    stat->tickets[i] = p->tickets;
     i++;
   }
   release(&ptable.lock);
