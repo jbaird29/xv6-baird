@@ -91,6 +91,7 @@ void testTickets2(void) {
   // run the parent in the same loop; should finish first bc of ticket count
   for(i = 0; i < 2000000000; i++) {}
   for(i = 0; i < 2000000000; i++) {}
+  // see how far along the child is at this moment, compared to the parent
   childticks = getpticks(childPID);
   parentticks = getpticks(parentPID) - parentticks;
   while(wait() != -1);
@@ -99,10 +100,6 @@ void testTickets2(void) {
   printf(1, "Validate: did parent function have ~%d times as many CPU ticks as child?\n", tickets);
 }
 
-/*
-Test: processes on Q1 run for one cycle, then two on Q2
-Test: processes run in proportion to # of tickets
-*/
 int main(int argc, char *argv[])
 {
   testQueues();

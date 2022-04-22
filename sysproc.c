@@ -91,7 +91,7 @@ sys_uptime(void)
   return xticks;
 }
 
-// TODO - double check this
+// allows process to change its ticket count
 int sys_settickets(void) {
   int num = 0;
   if(argint(0, &num) < 0)
@@ -102,6 +102,7 @@ int sys_settickets(void) {
   return 0;
 }
 
+// fills in the current info form proc table
 int sys_getpinfo(void) {
   struct pstat *stat;
   if(argptr(0, (void*)&stat, sizeof(*stat)) < 0)

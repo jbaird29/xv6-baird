@@ -13,12 +13,7 @@ struct {
   struct proc proc[NPROC];
   uint randnum;
 } ptable = { .randnum = 11587};  // seed value
-// TODO - ensure this works, or move randnum into 
-// global variable and forgo the lock
-// TODO - see if we can get a more random seed (cmostime)
 
-// TODO - add CPU ticks counting
-// TODO - add new pstat system call
 
 static struct proc *initproc;
 
@@ -347,7 +342,6 @@ wait(void)
   }
 }
 
-// TODO - verify correctness
 // Given a the priority number, chooses a proc
 // from that queue randomly based on ticket allocation
 struct proc *getnextproc(int priority) {
@@ -621,8 +615,6 @@ procdump(void)
 }
 
 int fillpinfo(struct pstat *stat) {
-  // TODO - do I need to disable interrupts here?
-
   struct proc *p;
   int i = 0;
   acquire(&ptable.lock);
