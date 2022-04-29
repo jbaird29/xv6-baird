@@ -12,7 +12,7 @@ exec(char *path, char **argv)
 {
   char *s, *last;
   int i, off;
-  uint argc, sz, sp, ustack[3+MAXARG+1];
+  uint argc, sz, sp, ustack[3+MAXARG+1], stackstart;
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
@@ -91,6 +91,10 @@ exec(char *path, char **argv)
   sp -= (3+argc+1) * 4;
   if(copyout(pgdir, sp, ustack, (3+argc+1)*4) < 0)
     goto bad;
+
+  // test allocating a new page at upper address
+  if((stackstart = allocuvm(pgdir, KERNBASE - PGSIZE, KERNBASE - 1)) == 0)
+      panic("Error allocating new page");
 
   // Save program name for debugging.
   for(last=s=path; *s; s++)
