@@ -38,10 +38,8 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
-  // initialize the first page to be all zero's values
-  sz = 0;
-  if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
-      goto bad;
+  // make the first page inacessible
+  sz = PGSIZE;
 
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
