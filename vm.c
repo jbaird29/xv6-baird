@@ -322,6 +322,13 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
+
+  // mark first page as inaccessible
+  if(allocuvm(d, 0, PGSIZE) == 0)
+    goto bad;
+  clearpteu(d, (char*)0);
+
+  // copy the remaining pages
   for(i = PGSIZE; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
