@@ -12,7 +12,7 @@ exec(char *path, char **argv)
 {
   char *s, *last;
   int i, off;
-  uint argc, sz, sp, ustack[3+MAXARG+1], stackstart;
+  uint argc, sz, sp, ustack[3+MAXARG+1], newstack;
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
@@ -65,13 +65,11 @@ exec(char *path, char **argv)
   end_op();
   ip = 0;
 
-  // Allocate two pages at the next page boundary.
-  // Make the first inaccessible.  Use the second as the user stack.
   sz = PGROUNDUP(sz);
-  if((sz = allocuvm(pgdir, sz, sz + 2*PGSIZE)) == 0)
-    goto bad;
-  clearpteu(pgdir, (char*)(sz - 2*PGSIZE));
-  sp = sz;
+  // Allocate stack at highest address
+  if((newstack = allocuvm(pgdir, USERTOP - PGSIZE, USERTOP)) == 0)
+      panic("Error allocating new page");
+  sp = newstack;
 
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
@@ -91,10 +89,6 @@ exec(char *path, char **argv)
   sp -= (3+argc+1) * 4;
   if(copyout(pgdir, sp, ustack, (3+argc+1)*4) < 0)
     goto bad;
-
-  // test allocating a new page at upper address
-  if((stackstart = allocuvm(pgdir, KERNBASE - PGSIZE, KERNBASE - 1)) == 0)
-      panic("Error allocating new page");
 
   // Save program name for debugging.
   for(last=s=path; *s; s++)

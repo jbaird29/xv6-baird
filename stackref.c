@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-  int *topptr = (int *)(KERNBASE - 4);  // pointer to the top user-space address
+  int *topptr = (int *)(USERTOP - 4);  // pointer to the top user-space address
   *topptr = 100;
   int childPID = fork();
   if(childPID == 0) {
