@@ -330,7 +330,7 @@ copyuvm(pde_t *pgdir, uint sz)
 
   // copy the remaining pages
   i = PGSIZE;
-  while(i < KERNBASE) {
+  while(i < USERTOP) {
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
@@ -345,8 +345,8 @@ copyuvm(pde_t *pgdir, uint sz)
       goto bad;
     }
     i += PGSIZE;
-    if(i >= sz && i < KERNBASE - PGSIZE)
-      i = KERNBASE - PGSIZE;
+    if(i >= sz && i < USERTOP - PGSIZE)
+      i = USERTOP - PGSIZE;
   }
 
   return d;
