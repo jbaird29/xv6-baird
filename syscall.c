@@ -69,7 +69,7 @@ argptr(int n, char **pp, int size)
   if(argint(n, &i) < 0)
     return -1;
   if(curproc->pid != 1) {
-    if(size < 0 || ((uint)i+size > curproc->sz && (uint)i < curproc->tf->esp) || (uint)i < PGSIZE) 
+    if(size < 0 || ((uint)i+size > curproc->sz && (uint)i < curproc->tf->esp) || (uint)i < PGSIZE || (uint)i+size > USERTOP) 
       return -1;
   }
   *pp = (char*)i;
