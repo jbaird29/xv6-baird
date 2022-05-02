@@ -345,6 +345,8 @@ copyuvm(pde_t *pgdir, uint sz)
       goto bad;
     }
     i += PGSIZE;
+    // when the text, data, heap have been fully copied,
+    // "jump" to copying the topmost stack page
     if(i >= sz && i < USERTOP - PGSIZE)
       i = USERTOP - PGSIZE;
   }

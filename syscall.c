@@ -18,8 +18,11 @@ int
 fetchint(uint addr, int *ip)
 {
   struct proc *curproc = myproc();
-  if((addr+4 >= curproc->sz && addr-4 < curproc->tf->esp) || addr+4 >= USERTOP) {
-    return -1;
+  // ignore the init process, which still has stack at page 0
+  if(curproc->pid != 1) {
+    // ensure the addr is within valid range
+    if((addr+4 > curproc->sz && addr < curproc->tf->esp) || addr+4 > USERTOP || addr < PGSIZE)
+      return -1;
   }
   *ip = *(int*)(addr);
   return 0;
@@ -33,8 +36,11 @@ fetchstr(uint addr, char **pp)
 {
   char *s, *ep;
   struct proc *curproc = myproc();
-  if(addr >= curproc->sz && addr < curproc->tf->esp) {
-    return -1;
+  // ignore the init process, which still has stack at page 0
+  if(curproc->pid != 1) {
+    // ensure the addr is within valid range
+    if((addr >= curproc->sz && addr < curproc->tf->esp) || addr < PGSIZE)
+      return -1;
   }
   *pp = (char*)addr;
   ep = addr < curproc->sz ? (char*)curproc->sz : (char*)USERTOP;
@@ -62,8 +68,9 @@ argptr(int n, char **pp, int size)
   struct proc *curproc = myproc();
   if(argint(n, &i) < 0)
     return -1;
-  if(size < 0 || ((uint)i+size > curproc->sz && (uint)i-size < curproc->tf->esp)) {
-    return -1;
+  if(curproc->pid != 1) {
+    if(size < 0 || ((uint)i+size > curproc->sz && (uint)i < curproc->tf->esp) || (uint)i < PGSIZE) 
+      return -1;
   }
   *pp = (char*)i;
   return 0;
