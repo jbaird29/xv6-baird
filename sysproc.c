@@ -89,3 +89,14 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// place the process' stack pointer at addr
+int
+sys_stackaddr(void)
+{
+  uint *stackaddr;
+  if(argptr(0, (void*)&stackaddr, sizeof(uint)) < 0)
+    return -1;
+  *stackaddr = myproc()->tf->esp;
+  return 0;
+}
